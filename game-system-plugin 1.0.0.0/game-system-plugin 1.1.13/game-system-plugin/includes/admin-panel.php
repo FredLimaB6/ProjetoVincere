@@ -68,6 +68,16 @@ function game_system_admin_menu() {
         'game-system-general-stats',
         'game_system_general_stats_page'
     );
+
+    // Adiciona o submenu para Feedbacks
+    add_submenu_page(
+        'game-system-panel',
+        'Feedbacks',
+        'Feedbacks',
+        'manage_options',
+        'game-system-feedbacks',
+        'game_system_feedbacks_page'
+    );
 }
 add_action('admin_menu', 'game_system_admin_menu');
 
@@ -230,6 +240,77 @@ function game_system_general_stats_page() {
         echo '<p><strong>Partidas Jogadas:</strong> ' . esc_html($playerStats['total_matches']) . '</p>';
         echo '<p><strong>Vitórias:</strong> ' . esc_html($playerStats['wins']) . '</p>';
         echo '<p><strong>Derrotas:</strong> ' . esc_html($playerStats['losses']) . '</p>';
+    }
+
+    echo '</div>';
+}
+
+// Página de Feedbacks
+function game_system_feedbacks_page() {
+    $feedbacks = get_option('game_system_feedbacks', []);
+    $categories = get_option('game_system_feedback_categories', []);
+
+    // Organiza os feedbacks por categoria
+    $categorizedFeedbacks = [];
+    foreach ($categories as $category) {
+        $categorizedFeedbacks[$category] = [];
+    }
+
+    foreach ($feedbacks as $feedback) {
+        if (isset($categorizedFeedbacks[$feedback['category']])) {
+            $categorizedFeedbacks[$feedback['category']][] = $feedback;
+        }
+    }
+
+    // Determina a aba ativa
+    $activeTab = $_GET['tab'] ?? (count($categories) > 0 ? $categories[0] : '');
+
+    echo '<div class="wrap">';
+    echo '<h1>Feedbacks dos Usuários</h1>';
+
+    // Menu de navegação entre as categorias
+    echo '<nav class="nav-tab-wrapper">';
+    foreach ($categories as $category) {
+        $activeClass = ($activeTab === $category) ? 'nav-tab-active' : '';
+        echo '<a href="?page=game-system-feedbacks&tab=' . urlencode($category) . '" class="nav-tab ' . $activeClass . '">' . esc_html($category) . '</a>';
+    }
+    echo '</nav>';
+
+    echo '<a href="?page=game-system-feedbacks&export_feedbacks=1" class="button button-primary">Exportar Feedbacks</a>';
+
+    // Exibe os feedbacks da aba ativa
+    if (isset($categorizedFeedbacks[$activeTab])) {
+        echo '<h2>' . esc_html($activeTab) . '</h2>';
+
+        if (empty($categorizedFeedbacks[$activeTab])) {
+            echo '<p>Nenhum feedback nesta categoria.</p>';
+        } else {
+            echo '<table class="widefat fixed">';
+            echo '<thead><tr><th>Usuário</th><th>Mensagem</th><th>Data</th><th>Resposta</th><th>Ações</th></tr></thead>';
+            echo '<tbody>';
+            foreach ($categorizedFeedbacks[$activeTab] as $feedback) {
+                $user = get_userdata($feedback['user_id']);
+                $username = $user ? $user->user_login : 'Usuário Anônimo';
+                $response = $feedback['response'] ? esc_html($feedback['response']) : 'Não respondido';
+
+                echo "<tr>
+                    <td>{$username}</td>
+                    <td>{$feedback['message']}</td>
+                    <td>{$feedback['date']}</td>
+                    <td>{$response}</td>
+                    <td>
+                        <form method='post'>
+                            <input type='hidden' name='feedback_index' value='{$feedback['index']}'>
+                            <textarea name='feedback_response' rows='2' placeholder='Responder...'></textarea>
+                            <button type='submit' class='button button-primary'>Enviar Resposta</button>
+                        </form>
+                    </td>
+                </tr>";
+            }
+            echo '</tbody></table>';
+        }
+    } else {
+        echo '<p>Categoria inválida ou não selecionada.</p>';
     }
 
     echo '</div>';

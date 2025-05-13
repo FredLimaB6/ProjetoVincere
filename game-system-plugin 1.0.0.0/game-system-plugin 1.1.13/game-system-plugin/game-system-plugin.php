@@ -8,28 +8,32 @@ Author: Frederico Lima Baptista Duarte
 
 // Carrega os arquivos necessários
 require_once plugin_dir_path(__FILE__) . 'includes/class-game-system.php';
-require_once plugin_dir_path(__FILE__) . 'includes/elo-manager.php';
-require_once plugin_dir_path(__FILE__) . 'includes/log-manager.php';
-require_once plugin_dir_path(__FILE__) . 'includes/ranking-manager.php';
+require_once plugin_dir_path(__FILE__) . 'includes/managers/elo-manager.php';
+require_once plugin_dir_path(__FILE__) . 'includes/managers/log-manager.php';
+require_once plugin_dir_path(__FILE__) . 'includes/managers/ranking-manager.php';
 require_once plugin_dir_path(__FILE__) . 'includes/shortcodes.php';
 require_once plugin_dir_path(__FILE__) . 'includes/admin-panel.php';
 require_once plugin_dir_path(__FILE__) . 'includes/helpers.php';
 require_once plugin_dir_path(__FILE__) . 'includes/feedback.php';
 require_once plugin_dir_path(__FILE__) . 'includes/admin-settings.php';
-require_once plugin_dir_path(__FILE__) . 'includes/credits-manager.php';
-require_once plugin_dir_path(__FILE__) . 'includes/badges-manager.php';
-require_once plugin_dir_path(__FILE__) . 'includes/player-stats-manager.php';
-require_once plugin_dir_path(__FILE__) . 'includes/global-stats-manager.php';
+require_once plugin_dir_path(__FILE__) . 'includes/managers/credits-manager.php';
+require_once plugin_dir_path(__FILE__) . 'includes/managers/badges-manager.php';
+require_once plugin_dir_path(__FILE__) . 'includes/managers/player-stats-manager.php';
+require_once plugin_dir_path(__FILE__) . 'includes/managers/global-stats-manager.php';
+require_once plugin_dir_path(__FILE__) . 'includes/challenge-system/class-challenge-system.php';
+require_once plugin_dir_path(__FILE__) . 'includes/challenge-system/challenge-shortcodes.php';
 
 // Inicializa o sistema
 function game_system_init() {
-    $GLOBALS['gameSystem'] = new GameSystem();
+    if (!isset($GLOBALS['gameSystem'])) {
+        $GLOBALS['gameSystem'] = new GameSystem();
+        error_log("Sistema inicializado com sucesso."); // Log para depuração
+    }
 }
 add_action('plugins_loaded', 'game_system_init');
 
 // Verifica e configura o banco de dados ao ativar o plugin
 function game_system_activate() {
-    // Verifica e cria as opções necessárias
     $required_options = [
         'game_system_player_elo',
         'game_system_player_scores',
@@ -38,13 +42,19 @@ function game_system_activate() {
         'game_system_current_matches',
         'game_system_logs',
         'game_system_feedbacks',
+        'game_system_feedback_categories',
         'game_system_banned_users',
     ];
 
     foreach ($required_options as $option) {
         if (!get_option($option)) {
-            update_option($option, []);
+            update_option($option, []); // Cria a opção com um valor padrão
         }
+    }
+
+    // Adiciona categorias padrão de feedbacks
+    if (!get_option('game_system_feedback_categories')) {
+        update_option('game_system_feedback_categories', ['Sugestões', 'Reclamações', 'Problemas técnicos']);
     }
 }
 register_activation_hook(__FILE__, 'game_system_activate');
@@ -105,23 +115,48 @@ function game_system_create_tables() {
 
     $charset_collate = $wpdb->get_charset_collate();
 
-    // Exemplo de tabela para armazenar partidas
-    $table_name = $wpdb->prefix . 'game_system_matches';
-    $sql = "CREATE TABLE IF NOT EXISTS $table_name (
+    // Tabela para filas
+    $queues_table = $wpdb->prefix . 'game_system_queues';
+    $sql_queues = "CREATE TABLE IF NOT EXISTS $queues_table (
+        id BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+        queue_data LONGTEXT NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        PRIMARY KEY (id)
+    ) $charset_collate;";
+
+    // Tabela para partidas
+    $matches_table = $wpdb->prefix . 'game_system_matches';
+    $sql_matches = "CREATE TABLE IF NOT EXISTS $matches_table (
         id BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT,
         match_data LONGTEXT NOT NULL,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
         PRIMARY KEY (id)
     ) $charset_collate;";
 
+    // Tabela para rankings
+    $rankings_table = $wpdb->prefix . 'game_system_rankings';
+    $sql_rankings = "CREATE TABLE IF NOT EXISTS $rankings_table (
+        id BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+        player_id BIGINT(20) UNSIGNED NOT NULL,
+        score INT NOT NULL,
+        type ENUM('general', 'monthly') NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        PRIMARY KEY (id)
+    ) $charset_collate;";
+
     require_once ABSPATH . 'wp-admin/includes/upgrade.php';
-    dbDelta($sql);
+    dbDelta($sql_queues);
+    dbDelta($sql_matches);
+    dbDelta($sql_rankings);
+
+    error_log("Tabelas criadas/verificadas: {$queues_table}, {$matches_table}, {$rankings_table}"); // Log para depuração
 }
 register_activation_hook(__FILE__, 'game_system_create_tables');
 
 // Enfileira o JavaScript para AJAX
 function game_system_enqueue_scripts() {
     if (!is_admin()) {
+        // Enfileira o arquivo game-system.js
         wp_enqueue_script(
             'game-system-ajax',
             plugin_dir_url(__FILE__) . 'assets/js/game-system.js',
@@ -130,9 +165,26 @@ function game_system_enqueue_scripts() {
             true
         );
 
+        // Enfileira o arquivo challenge-system.js
+        wp_enqueue_script(
+            'challenge-system-js',
+            plugin_dir_url(__FILE__) . 'includes/challenge-system/js/challenge-system.js',
+            ['jquery'], // Dependência do jQuery
+            '1.0.0',
+            true
+        );
+
+        // Passa variáveis para ambos os arquivos JavaScript
         wp_localize_script('game-system-ajax', 'gameSystemAjax', [
             'ajax_url' => admin_url('admin-ajax.php'),
             'nonce' => wp_create_nonce('game_system_nonce'),
+            'pluginDirUrl' => plugin_dir_url(__FILE__), // Adiciona o caminho do plugin
+        ]);
+
+        wp_localize_script('challenge-system-js', 'gameSystemAjax', [
+            'ajax_url' => admin_url('admin-ajax.php'),
+            'nonce' => wp_create_nonce('game_system_nonce'),
+            'pluginDirUrl' => plugin_dir_url(__FILE__), // Adiciona o caminho do plugin
         ]);
     }
 }
@@ -160,4 +212,24 @@ function game_system_load_textdomain() {
     load_plugin_textdomain('game-system-plugin', false, dirname(plugin_basename(__FILE__)) . '/languages');
 }
 add_action('init', 'game_system_load_textdomain');
+
+function create_challenge_pages() {
+    $pages = [
+        'lobby' => '[challenge_lobby]',
+        'partida-desafio' => '[challenge_match]',
+    ];
+
+    foreach ($pages as $slug => $shortcode) {
+        if (!get_page_by_path($slug)) {
+            wp_insert_post([
+                'post_title' => ucfirst($slug),
+                'post_name' => $slug,
+                'post_content' => $shortcode,
+                'post_status' => 'publish',
+                'post_type' => 'page',
+            ]);
+        }
+    }
+}
+register_activation_hook(__FILE__, 'create_challenge_pages');
 ?>

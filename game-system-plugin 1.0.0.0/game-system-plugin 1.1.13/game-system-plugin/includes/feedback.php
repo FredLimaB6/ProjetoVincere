@@ -21,14 +21,22 @@ function display_feedback_form() {
         return '<p>Você precisa estar logado para enviar feedbacks.</p>';
     }
 
+    // Busca as categorias dinamicamente do banco de dados
+    $categories = get_option('game_system_feedback_categories', []);
+
+    if (empty($categories)) {
+        return '<p>Não há categorias de feedback disponíveis no momento. Por favor, tente novamente mais tarde.</p>';
+    }
+
     ob_start();
     ?>
     <form id="feedback-form" method="post">
+        <?php wp_nonce_field('process_feedback_submission', 'feedback_nonce'); ?>
         <label for="feedback-category">Categoria:</label>
         <select id="feedback-category" name="feedback_category" required>
-            <option value="Sugestões">Sugestões</option>
-            <option value="Problemas técnicos">Problemas técnicos</option>
-            <option value="Reclamações">Reclamações</option>
+            <?php foreach ($categories as $category): ?>
+                <option value="<?php echo esc_attr($category); ?>"><?php echo esc_html($category); ?></option>
+            <?php endforeach; ?>
         </select>
 
         <label for="feedback-message">Deixe seu feedback:</label>
@@ -44,10 +52,23 @@ add_shortcode('game_feedback_form', 'display_feedback_form');
 // Processa o envio de feedback
 function process_feedback_submission() {
     if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['feedback_message']) && is_user_logged_in()) {
+        // Verifica o nonce
+        if (!isset($_POST['feedback_nonce']) || !wp_verify_nonce($_POST['feedback_nonce'], 'process_feedback_submission')) {
+            wp_die('Falha na verificação de segurança.', 'Erro', ['response' => 403]);
+        }
+
+        // Sanitiza e valida as entradas do formulário
         $feedback = sanitize_textarea_field($_POST['feedback_message']);
         $category = sanitize_text_field($_POST['feedback_category']);
         $currentUserId = get_current_user_id();
 
+        // Verifica se a categoria é válida
+        $validCategories = get_option('game_system_feedback_categories', ['Sugestões', 'Reclamações', 'Problemas técnicos']);
+        if (!in_array($category, $validCategories)) {
+            wp_die('Categoria inválida.', 'Erro', ['response' => 400]);
+        }
+
+        // Armazena o feedback no banco de dados
         $feedbacks = get_option('game_system_feedbacks', []);
         $feedbacks[] = [
             'user_id' => $currentUserId,
@@ -58,6 +79,7 @@ function process_feedback_submission() {
         ];
         update_option('game_system_feedbacks', $feedbacks);
 
+        // Redireciona com mensagem de sucesso
         wp_redirect(home_url('/feedbacks?success=1'));
         exit;
     }
@@ -110,6 +132,9 @@ function process_feedback_response() {
         $response = sanitize_textarea_field($_POST['feedback_response']);
 
         $feedbacks = get_option('game_system_feedbacks', []);
+        if (!isset($feedbacks[$feedbackIndex])) {
+            wp_die('Índice de feedback inválido.', 'Erro', ['response' => 400]);
+        }
         if (isset($feedbacks[$feedbackIndex])) {
             $feedbacks[$feedbackIndex]['response'] = $response;
 
@@ -124,9 +149,29 @@ function process_feedback_response() {
             }
 
             update_option('game_system_feedbacks', $feedbacks);
-            echo '<div class="updated"><p>Resposta enviada com sucesso!</p></div>';
+            wp_redirect(admin_url('admin.php?page=game-system-feedbacks&tab=' . urlencode($feedbacks[$feedbackIndex]['category']) . '&response=success'));
+            exit;
         }
     }
+    wp_redirect(admin_url('admin.php?page=game-system-feedbacks&response=error'));
+    exit;
 }
 add_action('admin_post_process_feedback_response', 'process_feedback_response');
+
+function export_feedbacks_to_csv() {
+    if (isset($_GET['export_feedbacks'])) {
+        $feedbacks = get_option('game_system_feedbacks', []);
+        header('Content-Type: text/csv');
+        header('Content-Disposition: attachment; filename="feedbacks.csv"');
+
+        $output = fopen('php://output', 'w');
+        fputcsv($output, ['Usuário', 'Categoria', 'Mensagem', 'Data']);
+        foreach ($feedbacks as $feedback) {
+            fputcsv($output, [$feedback['user_id'], $feedback['category'], $feedback['message'], $feedback['date']]);
+        }
+        fclose($output);
+        exit;
+    }
+}
+add_action('admin_init', 'export_feedbacks_to_csv');
 ?>
