@@ -1,12 +1,10 @@
 <?php
-require_once plugin_dir_path(__FILE__) . 'challenge-manager.php';
-
-class ChallengeManager {
+class LobbyManager {
     private $teams = [];
     private $matches = [];
 
     public function __construct() {
-        $this->teams = get_option('challenge_teams', []);
+        $this->teams = get_option('lobby_teams', []);
         $this->matches = get_option('challenge_matches', []);
     }
 
@@ -18,8 +16,12 @@ class ChallengeManager {
             'players' => [$creatorId],
             'status' => 'incomplete', // incomplete or complete
         ];
-        update_option('challenge_teams', $this->teams);
+        update_option('lobby_teams', $this->teams);
         return $teamId;
+    }
+
+    public function getTeams() {
+        return $this->teams;
     }
 
     public function joinTeam($teamId, $playerId) {
@@ -28,14 +30,40 @@ class ChallengeManager {
             if (count($this->teams[$teamId]['players']) === 5) {
                 $this->teams[$teamId]['status'] = 'complete';
             }
-            update_option('challenge_teams', $this->teams);
+            update_option('lobby_teams', $this->teams);
             return true;
         }
         return false;
     }
 
-    public function getTeams() {
-        return $this->teams;
+    public function leaveTeam($teamId, $playerId) {
+        if (!isset($this->teams[$teamId])) {
+            return ['success' => false, 'message' => 'O time não existe.'];
+        }
+
+        $team = $this->teams[$teamId];
+
+        // Verifica se o jogador está no time
+        if (!in_array($playerId, $team['players'])) {
+            return ['success' => false, 'message' => 'Você não está neste time.'];
+        }
+
+        // Se o jogador for o dono do time
+        if ($team['creator'] === $playerId) {
+            if (count($team['players']) > 1) {
+                return ['success' => false, 'message' => 'Você precisa remover todos os jogadores antes de fechar o time.'];
+            }
+
+            // Exclui o time se for o último jogador
+            unset($this->teams[$teamId]);
+            update_option('lobby_teams', $this->teams);
+            return ['success' => true, 'message' => 'O time foi excluído com sucesso.'];
+        }
+
+        // Remove o jogador do time
+        $this->teams[$teamId]['players'] = array_diff($team['players'], [$playerId]);
+        update_option('lobby_teams', $this->teams);
+        return ['success' => true, 'message' => 'Você saiu do time com sucesso.'];
     }
 
     public function createMatch($team1Id, $team2Id) {

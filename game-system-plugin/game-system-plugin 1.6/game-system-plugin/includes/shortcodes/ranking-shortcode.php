@@ -1,11 +1,11 @@
 <?php
 function display_ranking() {
-    if (!isset($GLOBALS['gameSystem'])) {
-        return '<p>O sistema não está inicializado.</p>';
+    if (!isset($GLOBALS['queueSystem'])) {
+        return '<p>O sistema de filas não está inicializado.</p>';
     }
 
-    $gameSystem = $GLOBALS['gameSystem'];
-    $ranking = $gameSystem->getScores();
+    $queueSystem = $GLOBALS['queueSystem'];
+    $ranking = $queueSystem->getScores();
 
     if (empty($ranking)) {
         return '<p>Nenhum jogador no ranking ainda.</p>';
@@ -15,7 +15,7 @@ function display_ranking() {
     $output .= '<table border="1" cellpadding="5" cellspacing="0">';
     $output .= '<tr><th>Jogador</th><th>Pontos</th><th>ELO</th></tr>';
     foreach ($ranking as $playerId => $score) {
-        $elo = $gameSystem->eloManager->getElo($playerId) ?? 1000;
+        $elo = $queueSystem->eloManager->getElo($playerId) ?? 1000;
         $output .= "<tr><td>Jogador ID: {$playerId}</td><td>{$score}</td><td>{$elo}</td></tr>";
     }
     $output .= '</table>';

@@ -91,47 +91,25 @@ function game_system_dashboard_page() {
 
 // Página de Rankings
 function game_system_rankings_page() {
-    if (!isset($GLOBALS['gameSystem'])) {
-        return '<p>O sistema não está inicializado.</p>';
+    if (!isset($GLOBALS['queueSystem'])) {
+        echo '<p>O sistema de filas não está inicializado.</p>';
+        return;
     }
-    $gameSystem = $GLOBALS['gameSystem'];
+
     $rankingManager = new RankingManager();
+    $ranking = $rankingManager->getGeneralRanking();
 
     echo '<div class="wrap">';
-    echo '<h1>Rankings</h1>';
+    echo '<h1>Ranking Geral</h1>';
 
-    // Adiciona o formulário de seleção de tipo de ranking e busca
-    $currentType = $_GET['ranking_type'] ?? 'general';
-    echo '<form method="get" style="margin-bottom: 20px;">';
-    echo '<input type="hidden" name="page" value="game-system-rankings">';
-    echo '<label for="ranking_type">Tipo de Ranking:</label>';
-    echo '<select name="ranking_type" id="ranking_type">';
-    echo '<option value="general"' . selected($currentType, 'general', false) . '>Geral</option>';
-    echo '<option value="monthly"' . selected($currentType, 'monthly', false) . '>Mensal</option>';
-    echo '</select>';
-    echo '<input type="text" name="search_player" placeholder="Buscar por ID ou Nome" value="' . esc_attr($_GET['search_player'] ?? '') . '">';
-    echo '<button type="submit" class="button button-primary">Filtrar</button>';
-    echo '</form>';
-
-    // Obtém o ranking com base no tipo selecionado
-    $ranking = $rankingManager->getRankingByType($currentType);
-
-    // Aplica o filtro de busca, se necessário
-    if (isset($_GET['search_player'])) {
-        $searchTerm = sanitize_text_field($_GET['search_player']);
-        $ranking = $rankingManager->filterRanking($searchTerm, $ranking);
-    }
-
-    echo '<h2>Ranking ' . ($currentType === 'monthly' ? 'Mensal' : 'Geral') . '</h2>';
     if (empty($ranking)) {
         echo '<p>Nenhum jogador no ranking ainda.</p>';
     } else {
         echo '<table class="widefat fixed">';
-        echo '<thead><tr><th>Jogador</th><th>Pontos</th><th>ELO</th></thead>';
+        echo '<thead><tr><th>Jogador</th><th>Pontos</th></tr></thead>';
         echo '<tbody>';
         foreach ($ranking as $playerId => $score) {
-            $elo = $gameSystem->eloManager->getElo($playerId) ?? 1000;
-            echo "<tr><td>{$playerId}</td><td>{$score}</td><td>{$elo}</td></tr>";
+            echo "<tr><td>{$playerId}</td><td>{$score}</td></tr>";
         }
         echo '</tbody></table>';
     }
@@ -141,51 +119,41 @@ function game_system_rankings_page() {
 
 // Página de Jogadores
 function game_system_players_page() {
-    if (!isset($GLOBALS['gameSystem'])) {
-        return '<p>O sistema não está inicializado.</p>';
-    }
     $bannedUsers = get_option('game_system_banned_users', []);
 
     echo '<div class="wrap">';
     echo '<h1>Gerenciamento de Jogadores</h1>';
-    echo '<h2>Proibir Jogadores</h2>';
-    ?>
-    <form method="post">
-        <label for="ban_user_id">Proibir Usuário (ID):</label>
-        <input type="number" name="ban_user_id" id="ban_user_id" required>
-        <button type="submit" class="button button-primary">Proibir</button>
-    </form>
-    <?php
 
-    echo '<h3>Jogadores Proibidos</h3>';
+    echo '<h2>Jogadores Proibidos</h2>';
     if (empty($bannedUsers)) {
         echo '<p>Nenhum jogador proibido.</p>';
     } else {
         echo '<table class="widefat fixed">';
-        echo '<thead><tr><th>ID do Usuário</th><th>Ações</th></tr></thead>';
+        echo '<thead><tr><th>ID do Jogador</th><th>Ações</th></tr></thead>';
         echo '<tbody>';
         foreach ($bannedUsers as $userId) {
             echo "<tr><td>{$userId}</td><td>";
-            ?>
-            <form method="post" style="display: inline;">
-                <input type="hidden" name="unban_user_id" value="<?php echo esc_attr($userId); ?>">
-                <button type="submit" class="button button-secondary">Remover Proibição</button>
-            </form>
-            <?php
+            echo '<form method="post">';
+            echo '<input type="hidden" name="unban_user_id" value="' . esc_attr($userId) . '">';
+            echo '<button type="submit" class="button button-secondary">Remover Proibição</button>';
+            echo '</form>';
             echo '</td></tr>';
         }
         echo '</tbody></table>';
     }
+
     echo '</div>';
 }
 
 // Página de Logs do Sistema
 function game_system_logs_page() {
-    if (!isset($GLOBALS['gameSystem'])) {
-        return '<p>O sistema não está inicializado.</p>';
+    if (!isset($GLOBALS['queueSystem'])) {
+        echo '<p>O sistema de filas não está inicializado.</p>';
+        return;
     }
-    $gameSystem = $GLOBALS['gameSystem'];
-    $logs = $gameSystem->getLogs();
+
+    $queueSystem = $GLOBALS['queueSystem'];
+    $logs = $queueSystem->getLogs();
 
     echo '<div class="wrap">';
     echo '<h1>Logs do Sistema</h1>';
@@ -197,7 +165,7 @@ function game_system_logs_page() {
         echo '<thead><tr><th>Data</th><th>Mensagem</th></tr></thead>';
         echo '<tbody>';
         foreach ($logs as $log) {
-            echo "<tr><td>" . esc_html($log['timestamp']) . "</td><td>" . esc_html($log['message']) . "</td></tr>";
+            echo "<tr><td>{$log['timestamp']}</td><td>{$log['message']}</td></tr>";
         }
         echo '</tbody></table>';
     }

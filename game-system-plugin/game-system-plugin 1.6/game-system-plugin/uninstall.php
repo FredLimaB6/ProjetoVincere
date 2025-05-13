@@ -19,7 +19,7 @@ $wpdb->query("DELETE FROM {$wpdb->prefix}options WHERE option_name LIKE 'game_sy
 // Exemplo: $wpdb->query("DROP TABLE IF EXISTS {$wpdb->prefix}game_system_scores");
 
 // Exclui as páginas criadas pelo plugin
-$pages = ['fila', 'partida', 'ranking', 'feedbacks']; // Inclui a página de feedbacks
+$pages = ['fila', 'partida', 'ranking', 'feedbacks', 'lobby', 'partida-desafio']; // Inclui páginas de desafios
 foreach ($pages as $page_slug) {
     $page = get_page_by_path($page_slug);
     if ($page) {
@@ -39,4 +39,6 @@ delete_option('game_system_banned_users');
 delete_option('game_system_feedback_categories');
 delete_option('game_system_available_maps');
 delete_option('game_system_max_players_per_queue');
+delete_option('game_system_general_ranking_history'); // Adicionado
+delete_option('game_system_monthly_ranking_history'); // Adicionado
 ?>

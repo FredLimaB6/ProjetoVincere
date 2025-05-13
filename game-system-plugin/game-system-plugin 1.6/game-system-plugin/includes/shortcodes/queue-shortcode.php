@@ -1,11 +1,15 @@
 <?php
+if (!defined('ABSPATH')) {
+    exit; // Sai se o arquivo for acessado diretamente.
+}
+
 function display_queue() {
-    if (!isset($GLOBALS['gameSystem'])) {
+    if (!isset($GLOBALS['queueSystem'])) {
         return '<p>O sistema não está inicializado.</p>';
     }
 
-    $gameSystem = $GLOBALS['gameSystem'];
-    $queues = $gameSystem->getQueues();
+    $queueSystem = $GLOBALS['queueSystem'];
+    $queues = $queueSystem->getQueues();
     $currentUserId = get_current_user_id();
 
     // Verifica se o usuário já está em uma fila

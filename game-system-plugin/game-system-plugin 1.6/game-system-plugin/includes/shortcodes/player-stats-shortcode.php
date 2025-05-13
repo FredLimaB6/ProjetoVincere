@@ -1,4 +1,11 @@
 <?php
+if (!defined('ABSPATH')) {
+    exit; // Sai se o arquivo for acessado diretamente.
+    define('ABSPATH', dirname(__FILE__) . '/../../../');
+    require_once(ABSPATH . 'wp-load.php');
+    require_once(ABSPATH . 'wp-includes/formatting.php');
+}
+
 function display_player_stats() {
     if (!is_user_logged_in()) {
         return '<p>Você precisa estar logado para ver suas estatísticas.</p>';

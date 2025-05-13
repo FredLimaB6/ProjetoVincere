@@ -7,10 +7,6 @@ Author: Frederico Lima Baptista Duarte
 */
 
 // Carrega os arquivos necessários
-require_once plugin_dir_path(__FILE__) . 'includes/class-game-system.php';
-require_once plugin_dir_path(__FILE__) . 'includes/managers/elo-manager.php';
-require_once plugin_dir_path(__FILE__) . 'includes/managers/log-manager.php';
-require_once plugin_dir_path(__FILE__) . 'includes/managers/ranking-manager.php';
 require_once plugin_dir_path(__FILE__) . 'includes/shortcodes.php';
 require_once plugin_dir_path(__FILE__) . 'includes/admin-panel.php';
 require_once plugin_dir_path(__FILE__) . 'includes/helpers.php';
@@ -20,17 +16,38 @@ require_once plugin_dir_path(__FILE__) . 'includes/managers/credits-manager.php'
 require_once plugin_dir_path(__FILE__) . 'includes/managers/badges-manager.php';
 require_once plugin_dir_path(__FILE__) . 'includes/managers/player-stats-manager.php';
 require_once plugin_dir_path(__FILE__) . 'includes/managers/global-stats-manager.php';
-require_once plugin_dir_path(__FILE__) . 'includes/challenge-system/class-challenge-system.php';
-require_once plugin_dir_path(__FILE__) . 'includes/challenge-system/challenge-shortcodes.php';
+require_once plugin_dir_path(__FILE__) . 'includes/managers/elo-manager.php';
+require_once plugin_dir_path(__FILE__) . 'includes/managers/log-manager.php';
+require_once plugin_dir_path(__FILE__) . 'includes/managers/ranking-manager.php';
+require_once plugin_dir_path(__FILE__) . 'includes/sistema-de-lobby/class-lobby-system.php';
+require_once plugin_dir_path(__FILE__) . 'includes/sistema-de-lobby/lobby-shortcodes.php';
+require_once plugin_dir_path(__FILE__) . 'includes/sistema-de-lobby/lobby-manager.php';
+require_once plugin_dir_path(__FILE__) . 'includes/sistema-de-filas/queue-manager.php';
+require_once plugin_dir_path(__FILE__) . 'includes/sistema-de-filas/queue-shortcode.php';
+require_once plugin_dir_path(__FILE__) . 'includes/sistema-de-filas/class-queue-system.php';
 
-// Inicializa o sistema
+// Inicializa o sistema de Filas
 function game_system_init() {
-    if (!isset($GLOBALS['gameSystem'])) {
-        $GLOBALS['gameSystem'] = new GameSystem();
-        error_log("Sistema inicializado com sucesso."); // Log para depuração
+    if (!class_exists('QueueSystem')) {
+        error_log("Erro: A classe QueueSystem não foi carregada.");
+        return;
+    }
+
+    if (!isset($GLOBALS['queueSystem'])) {
+        $GLOBALS['queueSystem'] = new QueueSystem();
+        error_log("Sistema de Filas inicializado com sucesso."); // Log para depuração
     }
 }
 add_action('plugins_loaded', 'game_system_init');
+
+// Inicializa o sistema de rankings
+function game_system_init_ranking() {
+    if (!isset($GLOBALS['rankingManager'])) {
+        $GLOBALS['rankingManager'] = new RankingManager();
+        error_log("Sistema de Rankings inicializado com sucesso."); // Log para depuração
+    }
+}
+add_action('plugins_loaded', 'game_system_init_ranking');
 
 // Verifica e configura o banco de dados ao ativar o plugin
 function game_system_activate() {
@@ -156,35 +173,34 @@ register_activation_hook(__FILE__, 'game_system_create_tables');
 // Enfileira o JavaScript para AJAX
 function game_system_enqueue_scripts() {
     if (!is_admin()) {
-        // Enfileira o arquivo game-system.js
+        // Enfileira o arquivo sistema-filas-ajax.js
         wp_enqueue_script(
-            'game-system-ajax',
-            plugin_dir_url(__FILE__) . 'assets/js/game-system.js',
+            'sistema-filas-ajax',
+            plugin_dir_url(__FILE__) . 'includes/sistema-de-filas/sistema-filas-ajax.js',
             ['jquery'],
             '1.0.0',
             true
         );
 
-        // Enfileira o arquivo challenge-system.js
+        // Passa variáveis para o arquivo sistema-filas-ajax.js
+        wp_localize_script('sistema-filas-ajax', 'queueSystemAjax', [
+            'ajax_url' => admin_url('admin-ajax.php'),
+            'nonce' => wp_create_nonce('game_system_nonce'),
+        ]);
+
+        // Enfileira o arquivo lobby-system.js
         wp_enqueue_script(
-            'challenge-system-js',
-            plugin_dir_url(__FILE__) . 'includes/challenge-system/js/challenge-system.js',
-            ['jquery'], // Dependência do jQuery
+            'lobby-system-js',
+            plugin_dir_url(__FILE__) . 'includes/sistema-de-lobby/js/lobby-system.js',
+            ['jquery'],
             '1.0.0',
             true
         );
 
-        // Passa variáveis para ambos os arquivos JavaScript
-        wp_localize_script('game-system-ajax', 'gameSystemAjax', [
+        // Passa variáveis para o arquivo lobby-system.js
+        wp_localize_script('lobby-system-js', 'lobbySystemAjax', [
             'ajax_url' => admin_url('admin-ajax.php'),
             'nonce' => wp_create_nonce('game_system_nonce'),
-            'pluginDirUrl' => plugin_dir_url(__FILE__), // Adiciona o caminho do plugin
-        ]);
-
-        wp_localize_script('challenge-system-js', 'gameSystemAjax', [
-            'ajax_url' => admin_url('admin-ajax.php'),
-            'nonce' => wp_create_nonce('game_system_nonce'),
-            'pluginDirUrl' => plugin_dir_url(__FILE__), // Adiciona o caminho do plugin
         ]);
     }
 }
@@ -213,10 +229,10 @@ function game_system_load_textdomain() {
 }
 add_action('init', 'game_system_load_textdomain');
 
-function create_challenge_pages() {
+function create_lobby_pages() {
     $pages = [
-        'lobby' => '[challenge_lobby]',
-        'partida-desafio' => '[challenge_match]',
+        'lobby' => '[lobby]',
+        'partida-lobby' => '[lobby_match]',
     ];
 
     foreach ($pages as $slug => $shortcode) {
@@ -231,5 +247,5 @@ function create_challenge_pages() {
         }
     }
 }
-register_activation_hook(__FILE__, 'create_challenge_pages');
+register_activation_hook(__FILE__, 'create_lobby_pages');
 ?>

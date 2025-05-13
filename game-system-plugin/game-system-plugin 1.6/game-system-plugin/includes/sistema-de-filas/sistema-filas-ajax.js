@@ -1,4 +1,4 @@
-//game-system.js
+//sistema-filas-ajax.js
 jQuery(document).ready(function ($) {
     // Carrega o som de entrar na fila
 
@@ -20,11 +20,11 @@ jQuery(document).ready(function ($) {
 
         // Envia a solicitação AJAX
         $.ajax({
-            url: gameSystemAjax.ajax_url,
+            url: queueSystemAjax.ajax_url,
             type: 'POST',
             data: {
                 action: 'game_system_process_queue',
-                nonce: gameSystemAjax.nonce,
+                nonce: queueSystemAjax.nonce,
                 queue_id: queueId,
                 action_type: actionType,
             },
@@ -63,11 +63,11 @@ jQuery(document).ready(function ($) {
     // Fallback para atualizar o estado da fila
     function updateQueueStateFallback() {
         $.ajax({
-            url: gameSystemAjax.ajax_url,
+            url: queueSystemAjax.ajax_url,
             type: 'POST',
             data: {
                 action: 'game_system_get_queue_state',
-                nonce: gameSystemAjax.nonce,
+                nonce: queueSystemAjax.nonce,
             },
             success: function (response) {
                 if (response.success) {

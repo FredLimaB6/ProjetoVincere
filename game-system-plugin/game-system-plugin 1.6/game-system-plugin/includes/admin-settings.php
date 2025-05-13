@@ -2,7 +2,11 @@
 
 // Processa ações administrativas
 function game_system_process_admin_actions() {
-    $gameSystem = $GLOBALS['gameSystem'];
+    if (!isset($GLOBALS['queueSystem'])) {
+        wp_die('O sistema de filas não está inicializado.', 'Erro', ['response' => 500]);
+    }
+
+    $queueSystem = $GLOBALS['queueSystem'];
 
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Verifique o nonce na função de processamento
@@ -12,12 +16,12 @@ function game_system_process_admin_actions() {
 
         // Resetar rankings
         if (isset($_POST['reset_general_ranking'])) {
-            $gameSystem->setPlayerScores([]);
+            $queueSystem->updateGeneralScore([], 0);
             add_settings_error('game_system_messages', 'general_ranking_reset', 'Ranking geral resetado com sucesso!', 'updated');
         }
 
         if (isset($_POST['reset_monthly_ranking'])) {
-            $gameSystem->setMonthlyScores([]);
+            $queueSystem->updateMonthlyScore([], 0);
             add_settings_error('game_system_messages', 'monthly_ranking_reset', 'Ranking mensal resetado com sucesso!', 'updated');
         }
 

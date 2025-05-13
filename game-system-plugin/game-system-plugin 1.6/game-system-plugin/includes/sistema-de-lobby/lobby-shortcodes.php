@@ -2,11 +2,11 @@
 function display_lobby() {
     // Verifica se o usuário está logado
     if (!is_user_logged_in()) {
-        return '<p>Você precisa estar logado para acessar o lobby de desafios.</p>';
+        return '<p>Você precisa estar logado para acessar o lobby.</p>';
     }
 
-    $challengeManager = new ChallengeManager();
-    $teams = $challengeManager->getTeams();
+    $lobbyManager = new LobbyManager();
+    $teams = $lobbyManager->getTeams();
     $currentUserId = get_current_user_id();
 
     // Organiza os times em disponíveis e completos
@@ -23,7 +23,7 @@ function display_lobby() {
     ob_start();
     ?>
     <div id="lobby">
-        <h3>Lobby de Desafios</h3>
+        <h3>Lobby de Times</h3>
         <button id="create-team">Criar Time</button>
 
         <!-- Abas para Times Disponíveis e Completos -->
@@ -46,15 +46,14 @@ function display_lobby() {
                                 <?php
                                 $user = get_userdata($playerId);
                                 $nickname = $user ? $user->user_login : 'Jogador Anônimo';
-                                $elo = $challengeManager->getPlayerElo($playerId); // Função para obter o ELO
                                 ?>
-                                <li><?php echo esc_html($nickname); ?> - ELO: <?php echo esc_html($elo); ?></li>
+                                <li><?php echo esc_html($nickname); ?></li>
                             <?php endforeach; ?>
                         </ul>
-                        <?php if (!in_array($currentUserId, $team['players'])): ?>
-                            <button class="join-team" data-team-id="<?php echo esc_attr($teamId); ?>">Entrar no Time</button>
+                        <?php if (in_array($currentUserId, $team['players'])): ?>
+                            <button class="leave-team" data-team-id="<?php echo esc_attr($teamId); ?>">Sair do Time</button>
                         <?php else: ?>
-                            <p>Você já está neste time.</p>
+                            <button class="join-team" data-team-id="<?php echo esc_attr($teamId); ?>">Entrar no Time</button>
                         <?php endif; ?>
                     </div>
                 <?php endforeach; ?>
@@ -75,9 +74,8 @@ function display_lobby() {
                                 <?php
                                 $user = get_userdata($playerId);
                                 $nickname = $user ? $user->user_login : 'Jogador Anônimo';
-                                $elo = $challengeManager->getPlayerElo($playerId); // Função para obter o ELO
                                 ?>
-                                <li><?php echo esc_html($nickname); ?> - ELO: <?php echo esc_html($elo); ?></li>
+                                <li><?php echo esc_html($nickname); ?></li>
                             <?php endforeach; ?>
                         </ul>
                     </div>
@@ -85,48 +83,20 @@ function display_lobby() {
             <?php endif; ?>
         </div>
     </div>
-
-    <script>
-        // Alterna entre as abas
-        document.addEventListener('DOMContentLoaded', function () {
-            const tabs = document.querySelectorAll('.nav-tab');
-            const contents = document.querySelectorAll('.tab-content');
-
-            tabs.forEach(tab => {
-                tab.addEventListener('click', function (e) {
-                    e.preventDefault();
-
-                    // Remove a classe ativa de todas as abas e conteúdos
-                    tabs.forEach(t => t.classList.remove('nav-tab-active'));
-                    contents.forEach(c => c.classList.remove('active'));
-
-                    // Adiciona a classe ativa à aba e conteúdo clicados
-                    tab.classList.add('nav-tab-active');
-                    const target = document.querySelector(tab.getAttribute('href'));
-                    target.classList.add('active');
-                });
-            });
-        });
-    </script>
-    <style>
-        .tab-content { display: none; }
-        .tab-content.active { display: block; }
-        .team { border: 1px solid #ddd; padding: 10px; margin-bottom: 10px; }
-        .team ul { list-style: none; padding: 0; }
-        .team ul li { margin: 5px 0; }
-    </style>
     <?php
     return ob_get_clean();
 }
-add_shortcode('challenge_lobby', 'display_lobby');
+add_shortcode('lobby', 'display_lobby');
 
-function display_challenge_match() {
-    return '<h3>Partida de Desafio</h3><p>Detalhes da partida serão exibidos aqui.</p>';
+function display_lobby_match() {
+    return '<h3>Partida de Lobby</h3><p>Detalhes da partida serão exibidos aqui.</p>';
 }
-add_shortcode('challenge_match', 'display_challenge_match');
+add_shortcode('lobby_match', 'display_lobby_match');
 
-add_action('wp_ajax_create_team', 'create_team');
+add_action('wp_ajax_create_lobby_team', 'create_team');
+add_action('wp_ajax_create_lobby_team', 'create_team');
 add_action('wp_ajax_join_team', 'join_team');
+add_action('wp_ajax_leave_team', 'process_leave_team');
 
 function create_team() {
     check_ajax_referer('game_system_nonce', 'nonce');
@@ -138,8 +108,8 @@ function create_team() {
     $teamName = sanitize_text_field($_POST['team_name']);
     $currentUserId = get_current_user_id();
 
-    $challengeManager = new ChallengeManager();
-    $teamId = $challengeManager->createTeam($teamName, $currentUserId);
+    $lobbyManager = new LobbyManager();
+    $teamId = $lobbyManager->createTeam($teamName, $currentUserId);
 
     if ($teamId) {
         wp_send_json_success(['message' => 'Time criado com sucesso!', 'team_id' => $teamId]);
@@ -158,13 +128,33 @@ function join_team() {
     $teamId = sanitize_text_field($_POST['team_id']);
     $currentUserId = get_current_user_id();
 
-    $challengeManager = new ChallengeManager();
-    $success = $challengeManager->joinTeam($teamId, $currentUserId);
+    $lobbyManager = new LobbyManager();
+    $success = $lobbyManager->joinTeam($teamId, $currentUserId);
 
     if ($success) {
         wp_send_json_success(['message' => 'Você entrou no time!']);
     } else {
         wp_send_json_error(['message' => 'Erro ao entrar no time.']);
+    }
+}
+
+function process_leave_team() {
+    check_ajax_referer('game_system_nonce', 'nonce');
+
+    if (!is_user_logged_in()) {
+        wp_send_json_error(['message' => 'Você precisa estar logado para sair de um time.']);
+    }
+
+    $teamId = sanitize_text_field($_POST['team_id']);
+    $playerId = get_current_user_id();
+
+    $lobbyManager = new LobbyManager();
+    $result = $lobbyManager->leaveTeam($teamId, $playerId);
+
+    if ($result['success']) {
+        wp_send_json_success(['message' => $result['message']]);
+    } else {
+        wp_send_json_error(['message' => $result['message']]);
     }
 }
 ?>

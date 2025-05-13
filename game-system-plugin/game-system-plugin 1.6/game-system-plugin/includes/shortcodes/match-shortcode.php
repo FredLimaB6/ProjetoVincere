@@ -28,4 +28,3 @@ function display_match() {
 
     return $output;
 }
-?>
