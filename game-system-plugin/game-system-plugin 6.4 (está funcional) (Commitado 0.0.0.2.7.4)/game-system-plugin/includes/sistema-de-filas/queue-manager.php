@@ -9,10 +9,6 @@ class QueueManager {
         global $wpdb;
         $this->table_filas = $wpdb->prefix . 'filas_tabela';
         $this->table_partidas = $wpdb->prefix . 'partidas_de_filas';
-
-        // Garante que as tabelas existam
-        $dbManager = new DatabaseManager();
-        $dbManager->createTables();
     }
 
     // Recupera todas as filas do banco de dados
@@ -54,6 +50,12 @@ class QueueManager {
     public function deleteQueue($queueId) {
         global $wpdb;
         $wpdb->delete($this->table_filas, ['id' => $queueId]);
+    }
+
+    // Método no QueueManager para integração com o RankingManager
+    public function updateRankingsAfterMatch($winningTeam, $losingTeam) {
+        $rankingManager = new RankingManager();
+        $rankingManager->updateRankingsAfterMatch($winningTeam, $losingTeam);
     }
 }
 

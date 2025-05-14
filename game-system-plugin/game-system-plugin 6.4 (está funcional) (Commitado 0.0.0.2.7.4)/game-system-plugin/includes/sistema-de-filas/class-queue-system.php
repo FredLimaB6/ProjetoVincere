@@ -38,6 +38,10 @@ class QueueSystem {
     }
 
     public function joinQueue($userId) {
+        if (!is_numeric($userId) || $userId <= 0) {
+            return "ID de usuário inválido.";
+        }
+
         $queues = $this->getQueues();
 
         // Verifica se o jogador já está em uma fila
@@ -104,6 +108,8 @@ class QueueSystem {
     }
 
     public function createMatch($players) {
+        $this->logActivity("Tentativa de criar partida com jogadores: " . implode(', ', $players));
+        
         global $wpdb;
 
         // Valida os jogadores
