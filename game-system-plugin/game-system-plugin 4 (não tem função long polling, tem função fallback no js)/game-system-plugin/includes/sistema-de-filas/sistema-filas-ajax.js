@@ -1,8 +1,7 @@
 //sistema-filas-ajax.js
 jQuery(document).ready(function ($) {
     // Carrega o som de entrar na fila
-
-    const queueJoinSound = new Audio(gameSystemAjax.pluginDirUrl + 'assets/sounds/join-queue.mp3'); // Certifique-se de que o caminho está correto
+    const queueJoinSound = new Audio(queueSystemAjax.pluginDirUrl + 'assets/sounds/join-queue.mp3'); // Certifique-se de que o caminho está correto
 
     // Evento de clique para entrar ou sair da fila
     $('#game-queue').on('click', '.join-queue, .leave-queue', function () {
@@ -31,22 +30,24 @@ jQuery(document).ready(function ($) {
             success: function (response) {
                 if (response.success) {
                     // Atualiza dinamicamente o conteúdo da fila
-                    $('#game-queue').html(response.data.html);
+                    $('#game-queue').html(response.html);
 
                     // Reproduz o som ao entrar na fila
                     if (actionType === 'join') {
-                        queueJoinSound.play().catch((error) => {
-                            console.error('Erro ao reproduzir o som:', error);
-                            alert('O som não pôde ser reproduzido. Verifique as configurações do navegador.');
-                        });
+                        if (queueJoinSound.canPlayType('audio/mpeg')) {
+                            queueJoinSound.play().catch((error) => {
+                                console.error('Erro ao reproduzir o som:', error);
+                                alert('O som não pôde ser reproduzido. Verifique as configurações do navegador.');
+                            });
+                        } else {
+                            console.error('Formato de áudio não suportado pelo navegador.');
+                        }
                     }
 
-                    // Configura o fallback para 2 segundos após clicar em "Sair da Fila"
-                    if (actionType === 'leave') {
-                        setTimeout(updateQueueStateFallback, 2000);
-                    }
+                    // Chama o fallback para garantir que o estado seja atualizado
+                    setTimeout(updateQueueStateFallback, 5000);
                 } else {
-                    alert(response.data.message || 'Erro ao processar a solicitação.');
+                    alert(response.message || 'Erro ao processar a solicitação.');
                 }
             },
             error: function (xhr, status, error) {
@@ -72,7 +73,7 @@ jQuery(document).ready(function ($) {
             success: function (response) {
                 if (response.success) {
                     // Atualiza dinamicamente o conteúdo da fila
-                    $('#game-queue').html(response.data.html);
+                    $('#game-queue').html(response.html);
                 }
             },
             error: function (xhr, status, error) {

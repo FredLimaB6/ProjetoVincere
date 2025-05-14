@@ -186,6 +186,7 @@ function game_system_enqueue_scripts() {
         wp_localize_script('sistema-filas-ajax', 'queueSystemAjax', [
             'ajax_url' => admin_url('admin-ajax.php'),
             'nonce' => wp_create_nonce('game_system_nonce'),
+            'pluginDirUrl' => plugin_dir_url(__FILE__), // Adiciona o caminho do diretório do plugin
         ]);
 
         // Enfileira o arquivo lobby-system.js
@@ -200,12 +201,13 @@ function game_system_enqueue_scripts() {
         // Passa variáveis para o arquivo lobby-system.js
         wp_localize_script('lobby-system-js', 'lobbySystemAjax', [
             'ajax_url' => admin_url('admin-ajax.php'),
-            'nonce' => wp_create_nonce('game_system_nonce'),
+            'nonce' => wp_create_nonce('game_system_nonce')
         ]);
     }
 }
 add_action('wp_enqueue_scripts', 'game_system_enqueue_scripts');
 
+// Função para distribuir recompensas mensais
 function distribute_monthly_rewards() {
     $rankingManager = new RankingManager();
     $creditsManager = new CreditsManager();
@@ -224,6 +226,7 @@ function distribute_monthly_rewards() {
 }
 add_action('init', 'distribute_monthly_rewards');
 
+// Carrega o textdomain para tradução
 function game_system_load_textdomain() {
     load_plugin_textdomain('game-system-plugin', false, dirname(plugin_basename(__FILE__)) . '/languages');
 }

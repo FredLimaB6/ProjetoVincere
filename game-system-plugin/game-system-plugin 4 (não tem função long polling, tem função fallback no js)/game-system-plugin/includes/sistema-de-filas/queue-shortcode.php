@@ -8,6 +8,7 @@ if (!defined('ABSPATH')) {
 // Exibe as filas disponíveis e os botões de ação
 function display_queue() {
     if (!isset($GLOBALS['queueSystem'])) {
+        error_log('Erro: O sistema de filas não está inicializado.');
         return '<p>O sistema de filas não está inicializado.</p>';
     }
 
@@ -45,6 +46,7 @@ function game_system_process_queue() {
     check_ajax_referer('game_system_nonce', 'nonce');
 
     if (!isset($GLOBALS['queueSystem'])) {
+        error_log('Erro: O sistema de filas não está inicializado.');
         wp_send_json_error(['message' => 'O sistema de filas não está inicializado.']);
     }
 
@@ -52,20 +54,25 @@ function game_system_process_queue() {
     $currentUserId = get_current_user_id();
 
     if (!isset($_POST['queue_id']) || !is_numeric($_POST['queue_id']) || intval($_POST['queue_id']) <= 0) {
+        error_log('Erro: ID da fila inválido.');
         wp_send_json_error(['message' => 'ID da fila inválido.']);
     }
     $queueId = intval($_POST['queue_id']);
 
     if (!isset($_POST['action_type']) || !in_array($_POST['action_type'], ['join', 'leave'], true)) {
+        error_log('Erro: Ação inválida.');
         wp_send_json_error(['message' => 'Ação inválida.']);
     }
     $action = sanitize_text_field($_POST['action_type']);
 
     if ($action === 'join') {
         $message = $queueSystem->joinQueue($currentUserId);
+        error_log("Jogador {$currentUserId} entrou na fila {$queueId}.");
     } elseif ($action === 'leave') {
         $message = $queueSystem->leaveQueue($currentUserId, $queueId);
+        error_log("Jogador {$currentUserId} saiu da fila {$queueId}.");
     } else {
+        error_log('Erro: Ação não reconhecida.');
         wp_send_json_error(['message' => 'Ação não reconhecida.']);
     }
 
@@ -90,6 +97,7 @@ function game_system_get_queue_state() {
     check_ajax_referer('game_system_nonce', 'nonce');
 
     if (!isset($GLOBALS['queueSystem'])) {
+        error_log('Erro: O sistema de filas não está inicializado.');
         wp_send_json_error(['message' => 'O sistema de filas não está inicializado.']);
     }
 
