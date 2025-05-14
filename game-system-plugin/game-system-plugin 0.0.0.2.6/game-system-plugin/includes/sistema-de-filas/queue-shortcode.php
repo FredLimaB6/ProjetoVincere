@@ -94,10 +94,8 @@ function game_system_process_queue() {
 
     if ($action === 'join') {
         $message = $queueSystem->joinQueue($currentUserId);
-        error_log("Jogador {$currentUserId} entrou na fila {$queueId}."); // Log para depuração
     } elseif ($action === 'leave') {
         $message = $queueSystem->leaveQueue($currentUserId, $queueId);
-        error_log("Jogador {$currentUserId} saiu da fila {$queueId}."); // Log para depuração
     } else {
         wp_send_json_error(['message' => 'Ação não reconhecida.']);
     }
@@ -116,8 +114,8 @@ function game_system_process_queue() {
 
     wp_send_json_success([
         'message' => $message,
-        'html' => $html, // Retorna o HTML atualizado da fila
-        'is_in_queue' => $isInQueue, // Retorna o estado atualizado do usuário
+        'html' => $html,
+        'is_in_queue' => $isInQueue,
     ]);
 }
 add_action('wp_ajax_game_system_process_queue', 'game_system_process_queue');

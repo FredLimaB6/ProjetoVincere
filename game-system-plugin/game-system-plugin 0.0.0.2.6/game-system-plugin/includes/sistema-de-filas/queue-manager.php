@@ -11,6 +11,7 @@ class QueueManager {
     }
 
     public function saveQueues($queues) {
+        $this->queues = $queues;
         update_option('game_system_queues', $queues);
     }
 }

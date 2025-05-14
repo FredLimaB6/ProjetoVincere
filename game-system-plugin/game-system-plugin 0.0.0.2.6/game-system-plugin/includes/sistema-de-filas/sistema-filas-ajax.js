@@ -3,9 +3,15 @@ jQuery(document).ready(function ($) {
     // Carrega o som de entrar na fila
     const queueJoinSound = new Audio(queueSystemAjax.pluginDirUrl + 'assets/sounds/join-queue.mp3');
 
+    // Função para registrar logs no console
+    function logMessage(message) {
+        console.log(`[Sistema de Filas]: ${message}`);
+    }
+
     // Função para atualizar os eventos após a atualização do HTML
     function rebindQueueEvents() {
-        // Evento para entrar ou sair da fila
+        logMessage('Reassociando eventos aos botões.');
+
         $('#game-queue').off('click', '.join-queue, .leave-queue').on('click', '.join-queue, .leave-queue', function () {
             const button = $(this);
             const queueId = button.data('queue-id');
@@ -13,11 +19,13 @@ jQuery(document).ready(function ($) {
 
             if (!queueId || !['join', 'leave'].includes(actionType)) {
                 alert('Ação inválida.');
+                logMessage('Ação inválida detectada.');
                 return;
             }
 
             // Desabilita o botão enquanto a solicitação é processada
             button.prop('disabled', true).text('Processando...');
+            logMessage(`Botão desabilitado. Ação: ${actionType}, Fila ID: ${queueId}`);
 
             // Envia a solicitação AJAX
             $.ajax({
@@ -31,8 +39,11 @@ jQuery(document).ready(function ($) {
                 },
                 success: function (response) {
                     if (response.success) {
+                        logMessage(`Resposta recebida com sucesso. Estado do usuário: ${response.is_in_queue ? 'Na fila' : 'Fora da fila'}`);
+
                         // Atualiza dinamicamente o conteúdo da fila
                         $('#game-queue').html(response.html);
+                        logMessage('HTML da fila atualizado.');
 
                         // Reassocia os eventos após a atualização do HTML
                         rebindQueueEvents();
@@ -40,45 +51,46 @@ jQuery(document).ready(function ($) {
                         // Atualiza o botão com base no estado do usuário
                         if (response.is_in_queue) {
                             button.removeClass('join-queue').addClass('leave-queue').text('Sair da Fila');
-                        } else {
-                            button.removeClass('leave-queue').addClass('join-queue').text('Entrar na Fila');
-                        }
+                            logMessage('Botão atualizado para "Sair da Fila".');
 
-                        // Reproduz o som ao entrar na fila
-                        if (actionType === 'join' && response.is_in_queue) {
+                            // Reproduz o som ao entrar na fila
                             if (queueJoinSound.canPlayType('audio/mpeg')) {
-                                queueJoinSound.play().catch((error) => {
+                                queueJoinSound.play().then(() => {
+                                    logMessage('Som reproduzido com sucesso.');
+                                }).catch((error) => {
                                     console.error('Erro ao reproduzir o som:', error);
                                     alert('O som não pôde ser reproduzido. Verifique as configurações do navegador.');
                                 });
                             } else {
                                 console.error('Formato de áudio não suportado pelo navegador.');
                             }
+                        } else {
+                            button.removeClass('leave-queue').addClass('join-queue').text('Entrar na Fila');
+                            logMessage('Botão atualizado para "Entrar na Fila".');
                         }
                     } else {
                         alert(response.message || 'Erro ao processar a solicitação.');
+                        logMessage('Erro na resposta do backend: ' + (response.message || 'Mensagem não especificada.'));
                     }
                 },
                 error: function (xhr, status, error) {
                     console.error('Erro AJAX:', error);
-                    alert('Ocorreu um erro ao processar sua solicitação. Por favor, tente novamente.');
+                    alert('Ocorreu um erro ao processar sua solicitação.');
+                    logMessage('Erro AJAX detectado: ' + error);
                 },
                 complete: function () {
                     // Reabilita o botão após a solicitação
                     button.prop('disabled', false);
+                    logMessage('Botão reabilitado.');
                 },
             });
         });
     }
 
-    // Inicializa os eventos ao carregar a página
-    rebindQueueEvents();
+    // Função para forçar a atualização do estado da fila
+    function forceQueueUpdate() {
+        logMessage('Forçando atualização do estado da fila.');
 
-    // Variável para armazenar o estado anterior da fila
-    let lastQueueState = '';
-
-    // Função para iniciar o Long Polling
-    function startLongPolling() {
         $.ajax({
             url: queueSystemAjax.ajax_url,
             type: 'POST',
@@ -88,28 +100,23 @@ jQuery(document).ready(function ($) {
             },
             success: function (response) {
                 if (response.success) {
-                    const newQueueState = JSON.stringify(response.html);
-                    if (newQueueState !== lastQueueState) {
-                        $('#game-queue').html(response.html);
-                        lastQueueState = newQueueState;
-
-                        // Reassocia os eventos após a atualização do HTML
-                        rebindQueueEvents();
-                    }
+                    $('#game-queue').html(response.html);
+                    rebindQueueEvents();
+                    logMessage('Estado da fila atualizado com sucesso.');
+                } else {
+                    logMessage('Erro ao atualizar o estado da fila: ' + (response.message || 'Mensagem não especificada.'));
                 }
-
-                // Inicia outra solicitação de Long Polling
-                startLongPolling();
             },
             error: function (xhr, status, error) {
-                console.error('Erro no Long Polling:', error);
-
-                // Tenta reconectar após 5 segundos
-                setTimeout(startLongPolling, 5000);
+                console.error('Erro ao atualizar o estado da fila:', error);
+                logMessage('Erro AJAX ao atualizar o estado da fila: ' + error);
             },
         });
     }
 
-    // Inicia o Long Polling ao carregar a página
-    startLongPolling();
+    // Inicializa os eventos ao carregar a página
+    rebindQueueEvents();
+
+    // Força a atualização do estado da fila a cada 2 segundos
+    setInterval(forceQueueUpdate, 2000);
 });
