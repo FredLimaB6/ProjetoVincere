@@ -59,12 +59,11 @@ add_action('plugins_loaded', 'game_system_init_ranking');
 
 // Verifica e configura o banco de dados ao ativar o plugin
 function game_system_activate() {
-    if (class_exists('QueueSystem')) {
-        $queueSystem = new QueueSystem();
-        $queueSystem->createFilasTable(); // Cria a tabela de filas
-        $queueSystem->createTables(); // Cria a tabela de partidas
-    }
+    // Inicializa o DatabaseManager para criar as tabelas necessárias
+    $dbManager = new DatabaseManager();
+    $dbManager->createTables(); // Cria todas as tabelas necessárias
 
+    // Garante que as opções padrão do sistema sejam criadas
     $required_options = [
         'game_system_player_elo',
         'game_system_player_scores',
