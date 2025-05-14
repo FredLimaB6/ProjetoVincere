@@ -1,5 +1,6 @@
 <?php
 function display_match() {
+    error_log('[Display] Exibindo informações da partida.');
     $gameSystem = $GLOBALS['gameSystem'];
 
     if (!$gameSystem->isGameActive()) {

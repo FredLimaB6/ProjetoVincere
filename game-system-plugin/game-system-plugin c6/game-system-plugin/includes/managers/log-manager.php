@@ -6,12 +6,21 @@ class LogManager {
         $this->logs = get_option('game_system_logs', []);
     }
 
-    public function addLog($message) {
+    public function addLog($message, $type = 'info') {
         $this->logs[] = [
             'timestamp' => date('Y-m-d H:i:s'),
+            'type' => $type, // Tipo do log (info, error, warning, etc.)
             'message' => $message,
         ];
         update_option('game_system_logs', $this->logs);
+    }
+
+    public function addMatchLog($matchId, $action, $details = '') {
+        $this->addLog("Partida ID {$matchId}: {$action}. {$details}", 'match');
+    }
+
+    public function addErrorLog($errorMessage) {
+        $this->addLog("Erro: {$errorMessage}", 'error');
     }
 
     public function getLogs() {
@@ -26,9 +35,9 @@ function export_logs_to_csv() {
         header('Content-Disposition: attachment; filename="logs.csv"');
 
         $output = fopen('php://output', 'w');
-        fputcsv($output, ['Data', 'Mensagem']);
+        fputcsv($output, ['Data', 'Tipo', 'Mensagem']);
         foreach ($logs as $log) {
-            fputcsv($output, [$log['timestamp'], $log['message']]);
+            fputcsv($output, [$log['timestamp'], $log['type'], $log['message']]);
         }
         fclose($output);
         exit;

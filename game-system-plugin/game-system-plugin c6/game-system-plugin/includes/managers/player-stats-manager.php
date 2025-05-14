@@ -31,4 +31,31 @@ class PlayerStatsManager {
             'losses' => $losses,
         ];
     }
+
+    public function updatePlayerStats($playerId, $map, $isWin) {
+        $stats = get_option('game_system_player_stats', []);
+
+        if (!isset($stats[$playerId])) {
+            $stats[$playerId] = [
+                'total_matches' => 0,
+                'wins' => 0,
+                'losses' => 0,
+                'maps_played' => [],
+            ];
+        }
+
+        $stats[$playerId]['total_matches']++;
+        if ($isWin) {
+            $stats[$playerId]['wins']++;
+        } else {
+            $stats[$playerId]['losses']++;
+        }
+
+        if (!isset($stats[$playerId]['maps_played'][$map])) {
+            $stats[$playerId]['maps_played'][$map] = 0;
+        }
+        $stats[$playerId]['maps_played'][$map]++;
+
+        update_option('game_system_player_stats', $stats);
+    }
 }

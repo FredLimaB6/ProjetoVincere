@@ -68,6 +68,14 @@ function process_feedback_submission() {
             wp_die('Categoria inválida.', 'Erro', ['response' => 400]);
         }
 
+        // Verifica se o feedback já existe
+        $feedbacks = get_option('game_system_feedbacks', []);
+        foreach ($feedbacks as $existingFeedback) {
+            if ($existingFeedback['user_id'] === $currentUserId && $existingFeedback['message'] === $feedback) {
+                wp_die('Você já enviou este feedback.', 'Erro', ['response' => 400]);
+            }
+        }
+
         // Armazena o feedback no banco de dados
         $feedbacks = get_option('game_system_feedbacks', []);
         $feedbacks[] = [

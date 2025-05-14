@@ -51,9 +51,9 @@ function display_lobby() {
                             <?php endforeach; ?>
                         </ul>
                         <?php if (in_array($currentUserId, $team['players'])): ?>
-                            <button class="leave-team" data-team-id="<?php echo esc_attr($teamId); ?>">Sair do Time</button>
+                            <button class="leave-team" data-team-id="<?php echo esc_attr($team['id']); ?>">Sair do Time</button>
                         <?php else: ?>
-                            <button class="join-team" data-team-id="<?php echo esc_attr($teamId); ?>">Entrar no Time</button>
+                            <button class="join-team" data-team-id="<?php echo esc_attr($team['id']); ?>">Entrar no Time</button>
                         <?php endif; ?>
                     </div>
                 <?php endforeach; ?>
@@ -94,7 +94,6 @@ function display_lobby_match() {
 add_shortcode('lobby_match', 'display_lobby_match');
 
 add_action('wp_ajax_create_lobby_team', 'create_team');
-add_action('wp_ajax_create_lobby_team', 'create_team');
 add_action('wp_ajax_join_team', 'join_team');
 add_action('wp_ajax_leave_team', 'process_leave_team');
 
@@ -105,18 +104,18 @@ function create_team() {
         wp_send_json_error(['message' => 'Você precisa estar logado para criar um time.']);
     }
 
-    $teamName = sanitize_text_field($_POST['team_name']);
     $currentUserId = get_current_user_id();
-
     $lobbyManager = new LobbyManager();
-    $teamId = $lobbyManager->createTeam($teamName, $currentUserId);
 
-    if ($teamId) {
-        wp_send_json_success(['message' => 'Time criado com sucesso!', 'team_id' => $teamId]);
+    $result = $lobbyManager->createTeam($currentUserId);
+
+    if ($result['success']) {
+        wp_send_json_success(['message' => 'Seu time foi criado com sucesso!', 'team_id' => $result['team_id']]);
     } else {
-        wp_send_json_error(['message' => 'Erro ao criar o time.']);
+        wp_send_json_error(['message' => 'Erro ao criar o time, verifique se você já não está em um.']);
     }
 }
+add_action('wp_ajax_create_lobby_team', 'create_team');
 
 function join_team() {
     check_ajax_referer('game_system_nonce', 'nonce');
@@ -157,4 +156,5 @@ function process_leave_team() {
         wp_send_json_error(['message' => $result['message']]);
     }
 }
+add_action('wp_ajax_leave_team', 'process_leave_team');
 ?>
