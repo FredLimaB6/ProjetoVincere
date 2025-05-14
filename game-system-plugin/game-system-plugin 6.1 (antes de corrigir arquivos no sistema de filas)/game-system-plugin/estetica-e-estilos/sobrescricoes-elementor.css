@@ -1,0 +1,16 @@
+/* Sobrescrições de estilos do Elementor */
+.elementor-widget-heading h2 {
+    font-size: 2.5rem;
+    color: #0073aa;
+}
+
+.elementor-widget-button .elementor-button {
+    background-color: #4caf50;
+    border-radius: 8px;
+    color: #fff;
+    font-weight: bold;
+}
+
+.elementor-widget-button .elementor-button:hover {
+    background-color: #388e3c;
+}

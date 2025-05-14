@@ -21,11 +21,13 @@ class Game_Match_Widget extends Widget_Base {
     }
 
     public function get_categories() {
-        return ['general'];
+        return ['vincere']; // Atualizado para a nova categoria
     }
 
     protected function render() {
-        echo do_shortcode('[game_match]'); // Reutiliza o shortcode existente
+        echo '<div class="custom-widget game-match-widget fade-in">';
+        echo do_shortcode('[game_match]');
+        echo '</div>';
     }
 }
 
@@ -44,7 +46,7 @@ class Game_Ranking_Widget extends Widget_Base {
     }
 
     public function get_categories() {
-        return ['general'];
+        return ['vincere']; // Atualizado para a nova categoria
     }
 
     protected function render() {
@@ -67,7 +69,7 @@ class Game_Achievements_Widget extends Widget_Base {
     }
 
     public function get_categories() {
-        return ['general'];
+        return ['vincere']; // Atualizado para a nova categoria
     }
 
     protected function render() {
@@ -90,7 +92,7 @@ class Game_Store_Widget extends Widget_Base {
     }
 
     public function get_categories() {
-        return ['general'];
+        return ['vincere']; // Atualizado para a nova categoria
     }
 
     protected function render() {
@@ -113,7 +115,7 @@ class Player_Stats_Widget extends Widget_Base {
     }
 
     public function get_categories() {
-        return ['general'];
+        return ['vincere']; // Atualizado para a nova categoria
     }
 
     protected function render() {

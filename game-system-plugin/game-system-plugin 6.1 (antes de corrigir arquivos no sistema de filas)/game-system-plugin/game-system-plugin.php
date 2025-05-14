@@ -320,4 +320,53 @@ if (!did_action('elementor/loaded')) {
     });
     return;
 }
+
+// Adiciona a categoria de widgets "Vincere" ao Elementor
+function add_vincere_widget_category($elements_manager) {
+    $elements_manager->add_category(
+        'vincere',
+        [
+            'title' => __('Vincere', 'game-system-plugin'),
+            'icon' => 'fa fa-plug',
+        ]
+    );
+}
+add_action('elementor/elements/categories_registered', 'add_vincere_widget_category');
+
+// Enfileira estilos e scripts personalizados
+function enqueue_custom_styles_and_scripts() {
+    // Estilos globais
+    wp_enqueue_style(
+        'estilos-globais',
+        plugin_dir_url(__FILE__) . 'estetica-e-estilos/estilos-globais.css',
+        [],
+        '1.0.0'
+    );
+
+    // Sobrescrições do Elementor
+    wp_enqueue_style(
+        'sobrescricoes-elementor',
+        plugin_dir_url(__FILE__) . 'estetica-e-estilos/sobrescricoes-elementor.css',
+        ['elementor-frontend'], // Garante que carregue após os estilos do Elementor
+        '1.0.0'
+    );
+
+    // Animações personalizadas
+    wp_enqueue_style(
+        'animacoes',
+        plugin_dir_url(__FILE__) . 'estetica-e-estilos/animacoes.css',
+        [],
+        '1.0.0'
+    );
+
+    // Scripts personalizados
+    wp_enqueue_script(
+        'scripts-personalizados',
+        plugin_dir_url(__FILE__) . 'estetica-e-estilos/scripts-personalizados.js',
+        ['jquery'],
+        '1.0.0',
+        true
+    );
+}
+add_action('wp_enqueue_scripts', 'enqueue_custom_styles_and_scripts');
 ?>
