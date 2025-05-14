@@ -20,13 +20,11 @@ jQuery(document).ready(function ($) {
                 action_type: action,
             },
             success: function (response) {
-                if (!response.success || !response.current_players || !response.max_players) {
-                    alert('Erro ao atualizar a barra de progresso.');
-                    return;
-                }
-
                 if (response.success) {
-                    updateQueueProgress(response.current_players, response.max_players);
+                    // Atualiza a barra de progresso
+                    if (response.current_players && response.max_players) {
+                        updateQueueProgress(response.current_players, response.max_players);
+                    }
 
                     if (action === 'join') {
                         $('.join-queue').hide();

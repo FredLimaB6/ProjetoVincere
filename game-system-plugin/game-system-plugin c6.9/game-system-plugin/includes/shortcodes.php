@@ -4,13 +4,13 @@ if (!defined('ABSPATH')) {
 }
 
 // Inclui os arquivos de shortcodes
-require_once plugin_dir_path(__FILE__) . 'shortcodes/match-shortcode.php';
 require_once plugin_dir_path(__FILE__) . 'shortcodes/ranking-shortcode.php';
 require_once plugin_dir_path(__FILE__) . 'shortcodes/achievements-shortcode.php';
 require_once plugin_dir_path(__FILE__) . 'shortcodes/store-shortcode.php';
 require_once plugin_dir_path(__FILE__) . 'shortcodes/player-stats-shortcode.php';
 
 require_once plugin_dir_path(__FILE__) . 'sistema-de-lobby/lobby-shortcodes.php';
+require_once plugin_dir_path(__FILE__) . 'sistema-de-filas/match-shortcode.php';
 
 require_once plugin_dir_path(__FILE__) . 'managers/player-stats-manager.php';
 require_once plugin_dir_path(__FILE__) . 'managers/badges-manager.php';

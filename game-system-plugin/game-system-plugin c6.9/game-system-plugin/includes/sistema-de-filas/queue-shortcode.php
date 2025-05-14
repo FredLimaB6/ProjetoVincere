@@ -28,6 +28,10 @@ function display_queue() {
     ?>
     <div id="game-queue">
         <h3>Filas Disponíveis</h3>
+        <div class="queue-progress-container">
+            <div class="queue-progress-bar"></div>
+            <div class="queue-progress-text">0/10 jogadores</div>
+        </div>
         <?php if ($userQueueId !== null): ?>
             <div class="queue">
                 <h4>Fila <?php echo esc_html($userQueueId); ?>:</h4>

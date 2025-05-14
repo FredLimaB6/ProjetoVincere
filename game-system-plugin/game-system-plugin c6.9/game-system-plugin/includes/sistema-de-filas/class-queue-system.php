@@ -56,6 +56,7 @@ class QueueSystem {
                 $queue[] = $userId;
                 $this->saveQueue($queueId, $queue);
                 $this->logActivity("Jogador ID {$userId} entrou na fila {$queueId}.");
+                error_log("[QueueSystem] Jogador {$userId} entrou na fila {$queueId}. Jogadores na fila: " . count($queue));
                 return "Você entrou na fila {$queueId}. Sua posição é " . count($queue) . ".";
             }
         }

@@ -37,6 +37,12 @@ function game_system_init() {
         $GLOBALS['queueSystem'] = new QueueSystem();
         error_log("Sistema de Filas inicializado com sucesso."); // Log para depuração
     }
+
+    // Inicializa o sistema de partidas (se necessário)
+    if (!isset($GLOBALS['gameSystem'])) {
+        $GLOBALS['gameSystem'] = $GLOBALS['queueSystem'];
+        error_log("Sistema de Partidas inicializado com sucesso."); // Log para depuração
+    }
 }
 add_action('plugins_loaded', 'game_system_init');
 
