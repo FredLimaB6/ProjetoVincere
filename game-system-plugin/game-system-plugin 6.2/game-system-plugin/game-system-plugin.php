@@ -24,6 +24,7 @@ require_once plugin_dir_path(__FILE__) . 'includes/sistema-de-lobby/lobby-manage
 require_once plugin_dir_path(__FILE__) . 'includes/sistema-de-filas/queue-manager.php';
 require_once plugin_dir_path(__FILE__) . 'includes/sistema-de-filas/queue-shortcode.php';
 require_once plugin_dir_path(__FILE__) . 'includes/sistema-de-filas/class-queue-system.php';
+require_once plugin_dir_path(__FILE__) . 'includes/DatabaseManager.php';
 
 // Inicializa o sistema de Filas
 function game_system_init() {
@@ -141,57 +142,8 @@ register_activation_hook(__FILE__, 'create_plugin_pages');
 
 // Cria tabelas personalizadas ao ativar o plugin
 function game_system_create_tables() {
-    global $wpdb;
-
-    $charset_collate = $wpdb->get_charset_collate();
-
-    // Tabela para filas
-    $queues_table = $wpdb->prefix . 'game_system_queues';
-    $sql_queues = "CREATE TABLE IF NOT EXISTS $queues_table (
-        id BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT,
-        queue_data LONGTEXT NOT NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
-        PRIMARY KEY (id)
-    ) $charset_collate;";
-
-    // Tabela para partidas
-    $matches_table = $wpdb->prefix . 'game_system_matches';
-    $sql_matches = "CREATE TABLE IF NOT EXISTS $matches_table (
-        id BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT,
-        match_data LONGTEXT NOT NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
-        PRIMARY KEY (id)
-    ) $charset_collate;";
-
-    // Tabela para rankings
-    $rankings_table = $wpdb->prefix . 'game_system_rankings';
-    $sql_rankings = "CREATE TABLE IF NOT EXISTS $rankings_table (
-        id BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT,
-        player_id BIGINT(20) UNSIGNED NOT NULL,
-        score INT NOT NULL,
-        type ENUM('general', 'monthly') NOT NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
-        PRIMARY KEY (id)
-    ) $charset_collate;";
-
-    // Tabela para rankings históricos
-    $rankings_history_table = $wpdb->prefix . 'game_system_rankings_history';
-    $sql_rankings_history = "CREATE TABLE IF NOT EXISTS $rankings_history_table (
-        id BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT,
-        player_id BIGINT(20) UNSIGNED NOT NULL,
-        score INT NOT NULL,
-        type ENUM('general', 'monthly') NOT NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
-        PRIMARY KEY (id)
-    ) $charset_collate;";
-
-    require_once ABSPATH . 'wp-admin/includes/upgrade.php';
-    dbDelta($sql_queues);
-    dbDelta($sql_matches);
-    dbDelta($sql_rankings);
-    dbDelta($sql_rankings_history);
-
-    error_log("Tabelas criadas/verificadas: {$queues_table}, {$matches_table}, {$rankings_table}, {$rankings_history_table}"); // Log para depuração
+    $dbManager = new DatabaseManager();
+    $dbManager->createTables();
 }
 register_activation_hook(__FILE__, 'game_system_create_tables');
 

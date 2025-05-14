@@ -9,8 +9,6 @@ global $wpdb;
 
 // Exclui tabelas personalizadas criadas pelo plugin
 $tables = [
-    "{$wpdb->prefix}game_system_matches",
-    "{$wpdb->prefix}game_system_queues", // Tabela antiga de filas
     "{$wpdb->prefix}game_system_rankings",
     "{$wpdb->prefix}lobby_teams", // Tabela dos times do lobby
     "{$wpdb->prefix}filas_tabela", // Tabela das filas
@@ -22,8 +20,7 @@ foreach ($tables as $table) {
 
 // Exclui opções criadas pelo plugin
 $options = [
-    'game_system_queues',
-    'game_system_player_elo',
+        'game_system_player_elo',
     'game_system_player_scores',
     'game_system_monthly_scores',
     'game_system_current_matches',

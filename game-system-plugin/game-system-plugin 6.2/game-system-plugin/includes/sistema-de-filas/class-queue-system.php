@@ -1,26 +1,18 @@
 <?php
+require_once plugin_dir_path(__FILE__) . 'queue-manager.php';
 require_once plugin_dir_path(__FILE__) . '../managers/elo-manager.php';
 require_once plugin_dir_path(__FILE__) . '../managers/log-manager.php';
 
 class QueueSystem {
-    private $queues = [];
-    private $currentMatches = [];
+    private $queueManager;
     private $eloManager;
     private $logManager;
 
     public function __construct() {
-        $this->createFilasTable(); // Cria a tabela de filas
-        $this->createTables(); // Cria a tabela de partidas
-        $this->queues = get_option('game_system_queues', []);
-        $this->currentMatches = get_option('game_system_current_matches', []);
+        $this->queueManager = new QueueManager();
         $this->eloManager = new EloManager();
         $this->logManager = new LogManager();
         $this->initializeQueues();
-    }
-
-    public function __destruct() {
-        update_option('game_system_queues', $this->queues);
-        update_option('game_system_current_matches', $this->currentMatches);
     }
 
     // Gerenciamento de Logs
@@ -32,68 +24,72 @@ class QueueSystem {
         return $this->logManager->getLogs();
     }
 
-    // Gerenciamento de Filas
+    // Gerenciamento de Filas (Delegado ao QueueManager)
     public function getQueues() {
-        return $this->queues;
+        return $this->queueManager->getQueues();
     }
 
-    public function setQueues($queues) {
-        $this->queues = $queues;
-        update_option('game_system_queues', $this->queues);
+    public function saveQueue($queueId, $userIds) {
+        $this->queueManager->saveQueue($queueId, $userIds);
+    }
+
+    public function deleteQueue($queueId) {
+        $this->queueManager->deleteQueue($queueId);
     }
 
     public function joinQueue($userId) {
-        if (!is_numeric($userId) || $userId <= 0) {
-            return "ID de usuário inválido.";
-        }
+        $queues = $this->getQueues();
 
         // Verifica se o jogador já está em uma fila
-        foreach ($this->queues as $queueId => $queue) {
+        foreach ($queues as $queueId => $queue) {
             if (in_array($userId, $queue)) {
                 return "Você já está na fila {$queueId}.";
             }
         }
 
-        foreach ($this->queues as $queueId => $queue) {
+        foreach ($queues as $queueId => $queue) {
             if (count($queue) < 10) {
-                $this->queues[$queueId][] = $userId;
-                $this->setQueues($this->queues);
+                $queue[] = $userId;
+                $this->saveQueue($queueId, $queue);
                 $this->logActivity("Jogador ID {$userId} entrou na fila {$queueId}.");
                 return "Você entrou na fila {$queueId}. Sua posição é " . count($queue) . ".";
             }
         }
 
-        $newQueueId = count($this->queues) + 1;
-        $this->queues[$newQueueId] = [$userId];
-        $this->setQueues($this->queues);
+        $newQueueId = count($queues) + 1;
+        $this->saveQueue($newQueueId, [$userId]);
         $this->logActivity("Jogador ID {$userId} criou e entrou na nova fila {$newQueueId}.");
         return "Você entrou na nova fila {$newQueueId}. Sua posição é 1.";
     }
 
     public function leaveQueue($userId, $queueId) {
-        if (!isset($this->queues[$queueId])) {
+        $queues = $this->getQueues();
+
+        if (!isset($queues[$queueId])) {
             return "A fila {$queueId} não existe.";
         }
 
-        if (!in_array($userId, $this->queues[$queueId])) {
+        if (!in_array($userId, $queues[$queueId])) {
             return "Você não está na fila {$queueId}.";
         }
 
-        $this->queues[$queueId] = array_diff($this->queues[$queueId], [$userId]);
+        $queues[$queueId] = array_diff($queues[$queueId], [$userId]);
         $this->logActivity("Jogador ID {$userId} saiu da fila {$queueId}.");
 
-        if (empty($this->queues[$queueId])) {
-            unset($this->queues[$queueId]);
+        if (empty($queues[$queueId])) {
+            $this->deleteQueue($queueId);
             $this->logActivity("Fila {$queueId} foi removida por estar vazia.");
+        } else {
+            $this->saveQueue($queueId, $queues[$queueId]);
         }
 
-        $this->setQueues($this->queues);
         return "Você saiu da fila {$queueId}.";
     }
 
     public function initializeQueues() {
-        if (empty($this->queues)) {
-            $this->queues[1] = [];
+        $queues = $this->getQueues();
+        if (empty($queues)) {
+            $this->saveQueue(1, []);
             $this->logActivity("Fila padrão criada automaticamente.");
         }
     }
@@ -194,45 +190,6 @@ class QueueSystem {
         $this->logActivity("Partida finalizada: ID {$matchId}, Vencedor: {$winningTeam}, Mapa: {$map}", 'match');
 
         return true;
-    }
-
-    // Criação de tabelas no banco de dados
-    public function createTables() {
-        global $wpdb;
-        $table_name = $wpdb->prefix . 'partidas_de_filas';
-
-        $charset_collate = $wpdb->get_charset_collate();
-
-        $sql = "CREATE TABLE IF NOT EXISTS $table_name (
-            id BIGINT(20) NOT NULL AUTO_INCREMENT,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            map VARCHAR(255) NOT NULL,
-            team_gr TEXT NOT NULL, -- IDs dos jogadores no time GR
-            team_bl TEXT NOT NULL, -- IDs dos jogadores no time BL
-            status ENUM('active', 'finished') DEFAULT 'active',
-            PRIMARY KEY (id)
-        ) $charset_collate;";
-
-        require_once ABSPATH . 'wp-admin/includes/upgrade.php';
-        dbDelta($sql);
-    }
-
-    public function createFilasTable() {
-        global $wpdb;
-        $table_name = $wpdb->prefix . 'filas_tabela'; // Tabela para filas
-        $charset_collate = $wpdb->get_charset_collate();
-
-        $sql = "CREATE TABLE $table_name (
-            id BIGINT(20) NOT NULL AUTO_INCREMENT,
-            queue_name VARCHAR(255) NOT NULL,
-            user_ids TEXT NOT NULL,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            PRIMARY KEY (id)
-        ) $charset_collate;";
-
-        require_once ABSPATH . 'wp-admin/includes/upgrade.php';
-        dbDelta($sql);
     }
 }
 ?>
