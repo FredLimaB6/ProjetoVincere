@@ -122,4 +122,29 @@ class Player_Stats_Widget extends Widget_Base {
         echo do_shortcode('[player_stats]'); // Reutiliza o shortcode existente
     }
 }
+
+// Widget para o shortcode [game_queue]
+class Game_Queue_Widget extends Widget_Base {
+    public function get_name() {
+        return 'game_queue_widget';
+    }
+
+    public function get_title() {
+        return 'Game Queue';
+    }
+
+    public function get_icon() {
+        return 'eicon-progress-bar';
+    }
+
+    public function get_categories() {
+        return ['vincere'];
+    }
+
+    protected function render() {
+        echo '<div class="custom-widget game-queue-widget">';
+        echo do_shortcode('[game_queue]');
+        echo '</div>';
+    }
+}
 ?>
